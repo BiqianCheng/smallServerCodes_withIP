@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #define PORT 55555
@@ -13,12 +14,20 @@
 
 // Driver code
 int main() {
-    printf("Part A: Bandwidth bug on only certain path. Only triggers the bug with client sending a single char 'a'. \n\n-----------------\nphp client.php a\n------------------\n");
+    printf(
+        "Part C: Client sends anything to have the server return data from a "
+        "local file WITHOUT TRIGGERS.\n");
     int sockfd;
     char buffer[MAXLINE];
     char largeReply[] =
-        "a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10";
+        "a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d"
+        "4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7"
+        "h8i9j10a1b2c3d4e5f6g7h8i9j10";
     char smallReply[] = "5";
+    // char dataStructure[50] = "";
+    char *dataStructure;
+    dataStructure = malloc(sizeof(char));
+
     struct sockaddr_in servaddr, cliaddr;
 
     // Creating socket file descriptor
@@ -31,8 +40,8 @@ int main() {
     memset(&cliaddr, 0, sizeof(cliaddr));
 
     // Filling server information
-    servaddr.sin_family = AF_INET;  // IPv4, match the socket() call
-    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // bind to 169.235.26.114 local IP address
+    servaddr.sin_family = AF_INET;  // IPv4
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // bind to 127.0.0.1 local IP address
     servaddr.sin_port = htons(PORT); //specify port to listen on
 
     // Bind the socket with the server address
@@ -52,13 +61,13 @@ int main() {
         buffer[n] = '\0';
         printf("Client : %s\n", buffer);
 
-        if (strcmp(buffer, "a") == 0) {
-            sendto(sockfd, (const char *)largeReply, sizeof(largeReply),
-                   MSG_CONFIRM, (const struct sockaddr *)&cliaddr, len);
-        } else {
-            sendto(sockfd, (const char *)smallReply, sizeof(smallReply),
-                   MSG_CONFIRM, (const struct sockaddr *)&cliaddr, len);
-        }
+        char fileBuff[MAXLINE];
+        FILE *f = fopen("data.txt", "r");
+        fgets(fileBuff, MAXLINE, f);
+        fclose(f);
+
+        sendto(sockfd, (const char *)fileBuff, strlen(fileBuff), MSG_CONFIRM,
+               (const struct sockaddr *)&cliaddr, len);
 
         printf("***SENT***\n");
     }

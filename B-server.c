@@ -8,23 +8,24 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <klee/klee.h>
 
 #define PORT 55555
 #define MAXLINE 1024
 
-// Driver code
-int main() {
-    printf(
-        "Part B: Client sends 'a' to create a data structure. Client sends 'b' "
-        "to trigger the bandwidth bug. \n\n-----------------\nphp client.php "
-        "a\n------------------\nthen\n-----------------\nphp client.php "
-        "b\n------------------\n");
+//server logic
+int serverLogic(char buffer[], char reply[]) {
+    // printf(
+    //     "Part B: Client sends 'a' to create a data structure. Client sends 'b' "
+    //     "to trigger the bandwidth bug. \n\n-----------------\nphp client.php "
+    //     "a\n------------------\nthen\n-----------------\nphp client.php "
+    //     "b\n------------------\n");
     int sockfd;
-    char buffer[MAXLINE];
-    char largeReply[] =
-        "a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d"
-        "4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7"
-        "h8i9j10a1b2c3d4e5f6g7h8i9j10";
+    // char buffer[MAXLINE];
+    // char largeReply[] =
+    //     "a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d"
+    //     "4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7h8i9j10a1b2c3d4e5f6g7"
+    //     "h8i9j10a1b2c3d4e5f6g7h8i9j10";
     char smallReply[] = "5";
     //char dataStructure[50] = "";
     char *dataStructure;
@@ -53,32 +54,56 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int len, n, o;
+    unsigned int len, n, o;
 
     len = sizeof(cliaddr);  // len is value/resuslt
 
     while (1) {
         n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL,
                      (struct sockaddr *)&cliaddr, &len);
-        buffer[n] = '\0';
+    
         printf("Client : %s\n", buffer);
 
-        if (strcmp(buffer, "a") == 0) {
+        if (strcmp(buffer, "a\n") == 0) {
             time_t mytime = time(NULL);
             char *time_str = ctime(&mytime);
-            time_str[strlen(time_str) - 1] = '\0';
+            // time_str[strlen(time_str) - 1] = '\0';
             //printf("A: %zu\n", sizeof(time_str));
 
-            dataStructure = (char *) realloc(dataStructure, strlen(time_str)+strlen(dataStructure));
-            strcat(dataStructure, time_str);
+            dataStructure = (char *) realloc(dataStructure, MAXLINE);
+            memset(dataStructure, 0, MAXLINE);
+            strcpy(dataStructure, time_str);
             printf("***DATA STRUCTURE SET***\n");
         } else {
             //dataStructure = (char *) realloc(dataStructure, sizeof(dataStructure));
-            sendto(sockfd, (const char *)dataStructure, strlen(dataStructure),
+            sendto(sockfd, (const char *)dataStructure, MAXLINE,
                    MSG_CONFIRM, (const struct sockaddr *)&cliaddr, len);
+            strcpy(reply, dataStructure);
             printf("***SENT***\n");
         }
     }
+
+    return 0;
+}
+
+// Driver code
+int driver()
+{
+    char buffer[MAXLINE];
+    // int sockfd;
+    // struct sockaddr_in servaddr, cliaddr;
+    char reply[MAXLINE * 1000];
+    memset(buffer, 0, MAXLINE);
+    memset(reply, 0, MAXLINE * 1000);
+    // char *reply = malloc(MAXLINE);
+    klee_make_symbolic(&buffer, sizeof(buffer), "buffer");
+    klee_make_symbolic(&reply, sizeof(reply), "reply");
+    return serverLogic(buffer, reply);
+}
+
+int main()
+{
+    driver();
 
     return 0;
 }

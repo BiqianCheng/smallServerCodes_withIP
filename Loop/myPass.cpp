@@ -49,7 +49,7 @@ LoopMaxIterPass::LoopMaxIterPass(Config& config) : llvm::LoopPass(ID), config(co
 }
 
 bool LoopMaxIterPass::runOnLoop(llvm::Loop *L, llvm::LPPassManager &LPM) {
-    llvm::Function* F = (*(L->block_begin()->base()))->getParent();
+    llvm::Function* F = (*(L->block_begin()))->getParent();
     if (std::find(config.summarized.begin(), config.summarized.end(), 
             F->getName().str()) == config.summarized.end()) {
         return false;
